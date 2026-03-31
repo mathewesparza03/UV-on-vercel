@@ -61,9 +61,8 @@ export default function Home() {
           {/* Hero Section */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold text-balance">
-              <span className="text-foreground">Browse </span>
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Freely
+                Mathew&apos;s Private Proxy
               </span>
             </h1>
             <p className="text-muted-foreground text-lg max-w-md mx-auto text-pretty">

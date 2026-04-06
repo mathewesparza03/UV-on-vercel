@@ -5,12 +5,14 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { cn } from "@/lib/utils"
 import { MessageBubble } from "./message-bubble"
-import { FileText, Send, Sparkles, List, MessageSquare, Clock } from "lucide-react"
+import { FileText, Send, Sparkles, List, MessageSquare, Clock, ImageIcon, X } from "lucide-react"
 
 export function AssistantMode() {
   const [input, setInput] = useState("")
   const [contentToAnalyze, setContentToAnalyze] = useState("")
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/sidekick" }),
@@ -23,20 +25,54 @@ export function AssistantMode() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [])
 
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith("image/")) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result as string
+      setSelectedImage(result)
+    }
+    reader.readAsDataURL(file)
+  }, [])
+
+  const clearImage = useCallback(() => {
+    setSelectedImage(null)
+    if (imageInputRef.current) imageInputRef.current.value = ""
+  }, [])
+
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && !selectedImage) || isLoading) return
 
-    const message = contentToAnalyze
-      ? `[ASSISTANT_MODE] Content to analyze:\n---\n${contentToAnalyze}\n---\n\nUser question: ${input}`
-      : `[ASSISTANT_MODE] ${input}`
+    let messageText = ""
+    
+    if (selectedImage) {
+      messageText = contentToAnalyze
+        ? `[ASSISTANT_MODE] [IMAGE_ANALYSIS] Content context:\n---\n${contentToAnalyze}\n---\n\nUser request: ${input || "Please analyze this image and explain what you see."}`
+        : `[ASSISTANT_MODE] [IMAGE_ANALYSIS] ${input || "Please analyze this image and explain what you see."}`
+    } else {
+      messageText = contentToAnalyze
+        ? `[ASSISTANT_MODE] Content to analyze:\n---\n${contentToAnalyze}\n---\n\nUser question: ${input}`
+        : `[ASSISTANT_MODE] ${input}`
+    }
 
-    sendMessage({ text: message })
+    // Build message parts
+    const parts: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = []
+    
+    if (selectedImage) {
+      parts.push({ type: "image", image: selectedImage })
+    }
+    parts.push({ type: "text", text: messageText })
+
+    sendMessage({ parts })
     setInput("")
+    clearImage()
   }
 
   const handleQuickAction = (action: string) => {
@@ -140,6 +176,13 @@ export function AssistantMode() {
                   <p className="text-xs text-muted-foreground">Know how long content will take to read</p>
                 </div>
               </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border text-left">
+                <ImageIcon className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Image Analysis</p>
+                  <p className="text-xs text-muted-foreground">Upload photos to get AI-powered answers and insights</p>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -161,21 +204,66 @@ export function AssistantMode() {
 
       {/* Input Area */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-border">
-        <div className="flex gap-2">
+        {/* Image Preview */}
+        {selectedImage && (
+          <div className="mb-3 relative inline-block">
+            <img
+              src={selectedImage}
+              alt="Selected"
+              className="max-h-20 rounded-lg border border-border object-contain"
+            />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/80 transition-colors"
+              disabled={isLoading}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        
+        <div className="flex gap-2 items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about the content..."
+            placeholder={selectedImage ? "Ask about this image..." : "Ask about the content..."}
             disabled={isLoading}
             className="flex-1 px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
           />
+          
+          {/* Image Upload Button */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={isLoading}
+            className={cn(
+              "w-11 h-11 rounded-xl flex items-center justify-center transition-all border",
+              selectedImage
+                ? "bg-blue-600/20 border-blue-500 text-blue-400"
+                : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+            title="Upload image"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
+          
+          {/* Send Button */}
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !selectedImage) || isLoading}
             className={cn(
               "w-11 h-11 rounded-xl flex items-center justify-center transition-all",
-              input.trim() && !isLoading
+              (input.trim() || selectedImage) && !isLoading
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}

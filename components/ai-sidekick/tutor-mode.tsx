@@ -34,21 +34,19 @@ export function TutorMode() {
 
     const textContent = input.trim() || "Please analyze this image and provide a detailed explanation with step-by-step solutions if applicable."
 
+    // Build message parts using correct AI SDK 6 format
+    const parts: Array<{ type: "text"; text: string } | { type: "file"; mediaType: string; url: string }> = []
+    
     if (selectedImage) {
-      // Send multimodal message with image
-      sendMessage({
-        text: `[TUTOR_MODE] ${textContent}`,
-        experimental_attachments: [
-          {
-            contentType: "image/jpeg",
-            url: selectedImage,
-          },
-        ],
-      })
-    } else {
-      sendMessage({ text: `[TUTOR_MODE] ${textContent}` })
+      // Detect media type from base64 data URL
+      const mediaType = selectedImage.startsWith("data:image/png") ? "image/png" 
+        : selectedImage.startsWith("data:image/gif") ? "image/gif"
+        : "image/jpeg"
+      parts.push({ type: "file", mediaType, url: selectedImage })
     }
+    parts.push({ type: "text", text: `[TUTOR_MODE] ${textContent}` })
 
+    sendMessage({ role: "user", parts })
     setInput("")
     setSelectedImage(null)
   }
@@ -62,10 +60,10 @@ export function TutorMode() {
 
   const getMessageImage = (message: typeof messages[0]) => {
     const imagePart = message.parts?.find(
-      (p): p is { type: "file"; mediaType: string; url: string } =>
-        p.type === "file" && p.mediaType?.startsWith("image/")
+      (p): p is { type: "file"; mediaType: string; url: string } => 
+        p.type === "file" && (p as { mediaType?: string }).mediaType?.startsWith("image/")
     )
-    return imagePart?.url
+    return imagePart?.url || undefined
   }
 
   return (

@@ -62,15 +62,19 @@ export function AssistantMode() {
         : `[ASSISTANT_MODE] ${input}`
     }
 
-    // Build message parts
-    const parts: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = []
+    // Build message parts using correct AI SDK 6 format
+    const parts: Array<{ type: "text"; text: string } | { type: "file"; mediaType: string; url: string }> = []
     
     if (selectedImage) {
-      parts.push({ type: "image", image: selectedImage })
+      // Detect media type from base64 data URL
+      const mediaType = selectedImage.startsWith("data:image/png") ? "image/png" 
+        : selectedImage.startsWith("data:image/gif") ? "image/gif"
+        : "image/jpeg"
+      parts.push({ type: "file", mediaType, url: selectedImage })
     }
     parts.push({ type: "text", text: messageText })
 
-    sendMessage({ parts })
+    sendMessage({ role: "user", parts })
     setInput("")
     clearImage()
   }
@@ -92,6 +96,14 @@ export function AssistantMode() {
       ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
       .map((p) => p.text)
       .join("") || ""
+  }
+
+  const getMessageImage = (message: typeof messages[0]) => {
+    const imagePart = message.parts?.find(
+      (p): p is { type: "file"; mediaType: string; url: string } => 
+        p.type === "file" && (p as { mediaType?: string }).mediaType?.startsWith("image/")
+    )
+    return imagePart?.url || undefined
   }
 
   return (
@@ -149,7 +161,7 @@ export function AssistantMode() {
             <div>
               <h3 className="font-semibold text-foreground mb-1">Page Assistant</h3>
               <p className="text-sm text-muted-foreground">
-                Summarize articles, answer questions, and extract insights from any content.
+                Summarize articles, answer questions, analyze images, and extract insights from any content.
               </p>
             </div>
 
@@ -191,6 +203,7 @@ export function AssistantMode() {
               key={message.id}
               role={message.role as "user" | "assistant"}
               content={getMessageContent(message)}
+              imageUrl={getMessageImage(message)}
             />
           ))
         )}

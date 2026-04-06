@@ -102,6 +102,20 @@ function cleanMessage(content: string): string {
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json()
 
+  console.log("[v0] Sidekick API called with", messages.length, "messages")
+  
+  // Debug: Log message parts to verify image handling
+  messages.forEach((msg, i) => {
+    const partTypes = msg.parts?.map(p => {
+      if (p.type === "file") {
+        const filePart = p as { type: "file"; mediaType?: string; url?: string }
+        return `file(${filePart.mediaType}, url length: ${filePart.url?.length || 0})`
+      }
+      return p.type
+    }).join(", ") || "no parts"
+    console.log(`[v0] Message ${i} (${msg.role}): parts = [${partTypes}]`)
+  })
+
   // Get the last user message to detect mode
   const lastUserMessage = messages.findLast((m) => m.role === "user")
   const lastMessageText = lastUserMessage?.parts

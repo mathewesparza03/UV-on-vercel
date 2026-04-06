@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SidekickProvider } from "@/components/ai-sidekick/sidekick-context";
+import { SidekickPanel } from "@/components/ai-sidekick/sidekick-panel";
+import { SidekickTrigger } from "@/components/ai-sidekick/sidekick-trigger";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +38,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        {children}
+        <SidekickProvider>
+          {children}
+          <SidekickTrigger />
+          <SidekickPanel />
+        </SidekickProvider>
       </body>
     </html>
   );

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Proxy | Fast & Secure Web Access",
+  title: "Proxy | Fast & Secure Web Access with AI Sidekick",
   description:
     "A modern, fast, and secure web proxy service. Browse the web freely and privately.",
   keywords: ["proxy", "web proxy", "secure browsing", "privacy"],
